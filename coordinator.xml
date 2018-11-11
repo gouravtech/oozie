@@ -1,0 +1,7 @@
+<coordinator-app name="MY_APP" frequency="${coord:days(1)}" start="2017-05-24T00:00Z" end="2017-05-30T00:00Z" timezone="IST" xmlns="uri:oozie:coordinator:0.1">
+   <action>
+      <workflow>
+         <app-path>hdfs://172.16.9.24:8020/user/root/incrementalhive</app-path>
+      </workflow>
+   </action>
+</coordinator-app>

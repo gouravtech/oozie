@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns="uri:oozie:workflow:0.2" name="sqoop-wf">
+    <start to="sqoop-node"/>
+
+    <action name="sqoop-node">
+        <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${nameNode}/user/${wf:user()}/${examplesRoot}/output-data/sqoop"/>
+                <mkdir path="${nameNode}/user/${wf:user()}/${examplesRoot}/output-data"/>
+            </prepare>
+            <configuration>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>${queueName}</value>
+                </property>
+            </configuration>
+            <command>export --connect jdbc:oracle:thin:@172.16.9.5:1521:orcl --username orv5_etl_ie --password orv5_etl --table SINK  --update-key COUNT  --update-mode allowinsert  --export-dir /apps/hive/warehouse/sink</command>
+        </sqoop>
+        <ok to="hive2-node1"/>
+        <error to="hive2-node2"/>
+    </action>
+    <action name="hive2-node1">
+        <hive2 xmlns="uri:oozie:hive2-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <configuration>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>${queueName}</value>
+                </property>
+            </configuration>
+            <jdbc-url>${jdbcURL}</jdbc-url>
+            <script>c.hql</script>
+            <param>MYDATE1=${wf:id()}</param>
+            <param>MYDATE2=succeed</param>
+            <param>MYDATE3=${timestamp()}</param>
+            <param>MYDATE4=${wf:user()}</param>
+            <param>MYDATE5=${wf:run()}</param>
+        </hive2>
+        <ok to="end"/>
+        <error to="end"/>
+    </action>
+    <action name="hive2-node2">
+        <hive2 xmlns="uri:oozie:hive2-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <configuration>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>${queueName}</value>
+                </property>
+            </configuration>
+            <jdbc-url>${jdbcURL}</jdbc-url>
+            <script>c.hql</script>
+            <param>MYDATE1=${wf:id()}</param>
+            <param>MYDATE2=${wf:errorMessage(wf:lastErrorNode())}</param>
+            <param>MYDATE3=${timestamp()}</param>
+            <param>MYDATE4=${wf:user()}</param>
+            <param>MYDATE5=${wf:run()}</param>
+        </hive2>
+        <ok to="end"/>
+        <error to="fail"/>
+    </action>
+	<kill name="fail">
+        <message>Sqoop failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>
